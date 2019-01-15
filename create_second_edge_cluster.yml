@@ -93,9 +93,6 @@
         validate_certs: False
       register: vc
 
-    - debug:
-        var: vc
-
     - name: Add Third Edge VM
       nsxt_fabric_nodes:
         hostname: "{{nsx_hostname}}"
