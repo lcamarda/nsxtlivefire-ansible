@@ -1,0 +1,223 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  become: yes
+  vars_files:
+    - variables.yml
+  tasks:
+    - name: Collect ID for port group "{{edge_pg_mgmt}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        portgroup_name: "{{edge_pg_mgmt}}"
+        validate_certs: no
+      register: pg_mgmt
+
+    - name: Collect ID for port group "{{edge_pg_ext1}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        portgroup_name: "{{edge_pg_ext1}}"
+        validate_certs: no
+      register: pg_ext1
+
+    - name: Collect ID for port group "{{edge_pg_ext2}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        portgroup_name: "{{edge_pg_ext2}}"
+        validate_certs: no
+      register: pg_ext2
+
+    - name: Collect ID for port group "{{edge_pg_tr}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        portgroup_name: "{{edge_pg_tr}}"
+        validate_certs: no
+      register: pg_tr
+
+    - name: Collect ID for vSphere Cluster "{{edge3_vc_cluster}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        cluster_name: "{{edge3_vc_cluster}}"
+        validate_certs: no
+      register: vc_cluster_edge3
+
+    - name: Collect ID for vSphere Datastore "{{edge3_vc_datastore}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        datastore_name: "{{edge3_vc_datastore}}"
+        validate_certs: no
+      register: vc_datastore_edge3
+
+    - name: Collect ID for vSphere Cluster "{{edge4_vc_cluster}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        cluster_name: "{{edge4_vc_cluster}}"
+        validate_certs: no
+      register: vc_cluster_edge4
+
+    - name: Collect ID for vSphere Datastore "{{edge4_vc_datastore}}"
+      vcenter_gather_moids:
+        hostname: "{{vc_hostname}}"
+        username: "{{vc_username}}"
+        password: "{{vc_password}}"
+        datacenter_name: "{{vc_datacenter}}"
+        datastore_name: "{{edge4_vc_datastore}}"
+        validate_certs: no
+      register: vc_datastore_edge4
+
+    - name: Collect Compute Manager id for "{{vc_hostname}}"
+      nsxt_fabric_compute_managers_facts:
+        hostname: "{{nsx_hostname}}"
+        username: "{{nsx_username}}"
+        password: "{{nsx_password}}"
+        validate_certs: False
+      register: vc
+
+    - debug:
+        var: vc
+
+    - name: Add Third Edge VM
+      nsxt_fabric_nodes:
+        hostname: "{{nsx_hostname}}"
+        username: "{{nsx_username}}"
+        password: "{{nsx_password}}"
+        validate_certs: False
+        resource_type: "EdgeNode"
+        display_name: "{{edge3_name}}"
+        ip_addresses:
+          - "{{edge3_mgmt_ip}}"
+        deployment_config:
+          form_factor: "{{edge3_size}}"
+          node_user_settings:
+            cli_password: "{{edge3_password}}"
+            root_password: "{{edge3_password}}"
+          vm_deployment_config:
+            placement_type: VsphereDeploymentConfig
+            vc_id: "{{vc.results[0].id}}"
+            data_network_ids:
+            - "{{pg_ext1.object_id}}"
+            - "{{pg_ext1.object_id}}"
+            - "{{pg_tr.object_id}}"
+            management_network_id: "{{pg_mgmt.object_id}}"
+            hostname: "{{edge3_name}}"
+            compute_id: "{{vc_cluster_edge3.object_id}}"
+            storage_id: "{{vc_datastore_edge3.object_id}}"
+            default_gateway_addresses:
+            - "{{edge3_mgmt_ip_gw}}"
+            management_port_subnets:
+            - ip_addresses:
+              - "{{edge3_mgmt_ip}}"
+              prefix_length: "{{edge3_mgmt_ip_mask}}"
+        state: present
+
+    - name: Add Fourth Edge VM
+      nsxt_fabric_nodes:
+        hostname: "{{nsx_hostname}}"
+        username: "{{nsx_username}}"
+        password: "{{nsx_password}}"
+        validate_certs: False
+        resource_type: "EdgeNode"
+        display_name: "{{edge4_name}}"
+        ip_addresses:
+          - "{{edge4_mgmt_ip}}"
+        deployment_config:
+          form_factor: "{{edge4_size}}"
+          node_user_settings:
+            cli_password: "{{edge4_password}}"
+            root_password: "{{edge4_password}}"
+          vm_deployment_config:
+            placement_type: VsphereDeploymentConfig
+            vc_id: "{{vc.results[0].id}}"
+            data_network_ids:
+            - "{{pg_ext1.object_id}}"
+            - "{{pg_ext1.object_id}}"
+            - "{{pg_tr.object_id}}"
+            management_network_id: "{{pg_mgmt.object_id}}"
+            hostname: "{{edge4_name}}"
+            compute_id: "{{vc_cluster_edge4.object_id}}"
+            storage_id: "{{vc_datastore_edge4.object_id}}"
+            default_gateway_addresses:
+            - "{{edge4_mgmt_ip_gw}}"
+            management_port_subnets:
+            - ip_addresses:
+              - "{{edge4_mgmt_ip}}"
+              prefix_length: "{{edge4_mgmt_ip_mask}}"
+        state: present
+
+    - name: Install pyvmomi tools dependency
+      shell: "cd /tmp; git clone https://github.com/vmware/pyvmomi-community-samples.git; cp -r pyvmomi-community-samples/samples/tools /usr/local/lib/python2.7/dist-packages"
+
+    - name: Download turn off reservation script
+      get_url:
+        url:  https://github.com/vmware/nsx-t-datacenter-ci-pipelines/raw/master/tasks/install-nsx-t/turn_off_reservation.py
+        dest: ./
+
+    - name: Turn off memory reservation edge nodes
+      command: python ./turn_off_reservation.py --host "{{vc_hostname}}" --user "{{vc_username}}" --password "{{vc_password}}" --vm_list "{{edge3_name}}","{{edge4_name}}"
+
+
+    - name: Create uplink profile for edge nodes
+      nsxt_uplink_profiles:
+        hostname: "{{nsx_hostname}}"
+        username: "{{nsx_username}}"
+        password: "{{nsx_password}}"
+        validate_certs: False
+        resource_type: UplinkHostSwitchProfile
+        display_name: "{{item.display_name}}"
+        mtu: 1700
+        teaming: "{{item.teaming}}"
+        transport_vlan: "{{item.transport_vlan}}"
+        state: "present"
+      with_items:
+        - "{{uplink_profiles_edges}}"
+
+    - name: Create edge transport nodes
+      nsxt_transport_nodes:
+        hostname: "{{nsx_hostname}}"
+        username: "{{nsx_username}}"
+        password: "{{nsx_password}}"
+        validate_certs: False
+        resource_type: TransportNode
+        display_name: "{{item.display_name}}"
+        description: NSX Edge Transport Node
+        host_switch_spec:
+          resource_type: StandardHostSwitchSpec
+          host_switches: "{{item.host_switches}}"
+        transport_zone_endpoints: "{{item.transport_zone_endpoints}}"
+        fabric_node_name: "{{item.fabric_node_name}}"
+        state: present
+      with_items:
+        - "{{edges_transport_nodes}}"
+
+    - name: Add edge cluster "{{edge_cluster_name}}"
+      nsxt_edge_clusters:
+        hostname: "{{nsx_hostname}}"
+        username: "{{nsx_username}}"
+        password: "{{nsx_password}}"
+        validate_certs: False
+        display_name: "{{edge_cluster_name}}"
+        members:
+        - transport_node_name: "Edge03"
+        - transport_node_name: "Edge04"
+        state: present
+
