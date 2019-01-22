@@ -5,85 +5,20 @@
   vars_files:
     - variables.yml
   tasks:
-    - name: Collect ID for port group "{{edge_pg_mgmt}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        portgroup_name: "{{edge_pg_mgmt}}"
-        validate_certs: no
-      register: pg_mgmt
 
-    - name: Collect ID for port group "{{edge_pg_ext1}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        portgroup_name: "{{edge_pg_ext1}}"
-        validate_certs: no
-      register: pg_ext1
+    - name: Collect Ext1_PG Network id
+      command: sudo pwsh ./Ext1_PG_key.ps1
+      register: Ext1_PG_key
 
-    - name: Collect ID for port group "{{edge_pg_ext2}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        portgroup_name: "{{edge_pg_ext2}}"
-        validate_certs: no
-      register: pg_ext2
+    - debug: var=Ext1_PG_key
 
-    - name: Collect ID for port group "{{edge_pg_tr}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        portgroup_name: "{{edge_pg_tr}}"
-        validate_certs: no
-      register: pg_tr
+    - name: Collect Ext2_PG Network id
+      command: sudo pwsh ./Ext2_PG_key.ps1
+      register: Ext2_PG_key
 
-    - name: Collect ID for vSphere Cluster "{{edge3_vc_cluster}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        cluster_name: "{{edge3_vc_cluster}}"
-        validate_certs: no
-      register: vc_cluster_edge3
-
-    - name: Collect ID for vSphere Datastore "{{edge3_vc_datastore}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        datastore_name: "{{edge3_vc_datastore}}"
-        validate_certs: no
-      register: vc_datastore_edge3
-
-    - name: Collect ID for vSphere Cluster "{{edge4_vc_cluster}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        cluster_name: "{{edge4_vc_cluster}}"
-        validate_certs: no
-      register: vc_cluster_edge4
-
-    - name: Collect ID for vSphere Datastore "{{edge4_vc_datastore}}"
-      vcenter_gather_moids:
-        hostname: "{{vc_hostname}}"
-        username: "{{vc_username}}"
-        password: "{{vc_password}}"
-        datacenter_name: "{{vc_datacenter}}"
-        datastore_name: "{{edge4_vc_datastore}}"
-        validate_certs: no
-      register: vc_datastore_edge4
+    - name: Collect Transport_PG Network id
+      command: sudo pwsh ./Transport_PG_key.ps1
+      register: Transport_PG_key
 
     - name: Collect Compute Manager id for "{{vc_hostname}}"
       nsxt_fabric_compute_managers_facts:
@@ -112,13 +47,13 @@
             placement_type: VsphereDeploymentConfig
             vc_id: "{{vc.results[0].id}}"
             data_network_ids:
-            - "{{pg_ext1.object_id}}"
-            - "{{pg_ext1.object_id}}"
-            - "{{pg_tr.object_id}}"
-            management_network_id: "{{pg_mgmt.object_id}}"
+            - "{{Ext1_PG_key.stdout}}"
+            - "{{Ext2_PG_key.stdout}}"
+            - "{{Transport_PG_key.stdout}}"
+            management_network_id: "dvportgroup-263"
             hostname: "{{edge3_name}}"
-            compute_id: "{{vc_cluster_edge3.object_id}}"
-            storage_id: "{{vc_datastore_edge3.object_id}}"
+            compute_id: "domain-c26"
+            storage_id: "datastore-201"
             default_gateway_addresses:
             - "{{edge3_mgmt_ip_gw}}"
             management_port_subnets:
@@ -146,13 +81,13 @@
             placement_type: VsphereDeploymentConfig
             vc_id: "{{vc.results[0].id}}"
             data_network_ids:
-            - "{{pg_ext1.object_id}}"
-            - "{{pg_ext1.object_id}}"
-            - "{{pg_tr.object_id}}"
-            management_network_id: "{{pg_mgmt.object_id}}"
+            - "{{Ext1_PG_key.stdout}}"
+            - "{{Ext2_PG_key.stdout}}"
+            - "{{Transport_PG_key.stdout}}"
+            management_network_id: "dvportgroup-263"
             hostname: "{{edge4_name}}"
-            compute_id: "{{vc_cluster_edge4.object_id}}"
-            storage_id: "{{vc_datastore_edge4.object_id}}"
+            compute_id: "domain-c26"
+            storage_id: "datastore-201"
             default_gateway_addresses:
             - "{{edge4_mgmt_ip_gw}}"
             management_port_subnets:
@@ -161,17 +96,8 @@
               prefix_length: "{{edge4_mgmt_ip_mask}}"
         state: present
 
-    - name: Install pyvmomi tools dependency
-      shell: "cd /tmp; git clone https://github.com/vmware/pyvmomi-community-samples.git; cp -r pyvmomi-community-samples/samples/tools /usr/local/lib/python2.7/dist-packages"
-
-    - name: Download turn off reservation script
-      get_url:
-        url:  https://github.com/vmware/nsx-t-datacenter-ci-pipelines/raw/master/tasks/install-nsx-t/turn_off_reservation.py
-        dest: ./
-
-    - name: Turn off memory reservation edge nodes
-      command: python ./turn_off_reservation.py --host "{{vc_hostname}}" --user "{{vc_username}}" --password "{{vc_password}}" --vm_list "{{edge3_name}}","{{edge4_name}}"
-
+    - name: Remove Edge VMs Memory reservation
+      command: pwsh ./remove_edge_reservations.ps1
 
     - name: Create uplink profile for edge nodes
       nsxt_uplink_profiles:
