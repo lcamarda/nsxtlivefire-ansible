@@ -26,7 +26,7 @@ edge3_vc_datastore: "esx-03a-local"
 
 #Edge VM 4 deployment Info
 edge4_name: "EdgeNode4"
-edge4_mgmt_ip: "192.168.110.22"
+edge4_mgmt_ip: "192.168.110.23"
 edge4_mgmt_ip_gw: "192.168.110.1"
 edge4_mgmt_ip_mask: "24"
 edge4_size: "MEDIUM"
