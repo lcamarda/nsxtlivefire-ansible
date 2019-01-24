@@ -87,7 +87,7 @@
             management_network_id: "dvportgroup-263"
             hostname: "{{edge4_name}}"
             compute_id: "domain-c26"
-            storage_id: "datastore-201"
+            storage_id: "datastore-202"
             default_gateway_addresses:
             - "{{edge4_mgmt_ip_gw}}"
             management_port_subnets:
